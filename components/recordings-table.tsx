@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRecordings, updateRecording, deleteRecording } from '@/hooks/use-recordings'
+import { useRecordings, deleteRecording } from '@/hooks/use-recordings'
 import type { Recording } from '@/lib/types/recording'
 import {
   Table,
@@ -15,12 +15,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,19 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Eye, CheckCircle, Archive, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-
-const statusColors: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700 border-amber-200',
-  reviewed: 'bg-primary/10 text-primary border-primary/20',
-  archived: 'bg-muted text-muted-foreground border-border'
-}
-
-const statusLabels: Record<string, string> = {
-  pending: 'Pendiente',
-  reviewed: 'Revisado',
-  archived: 'Archivado'
-}
+import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Eye, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react'
 
 const sentimentEmojis: Record<string, { emoji: string; label: string }> = {
   positive: { emoji: '😊', label: 'Positivo' },
@@ -67,32 +54,36 @@ const softSkillLabels: Record<string, { label: string; color: string }> = {
 
 export function RecordingsTable({ userId }: { userId?: string } = {}) {
   const [page, setPage] = useState(1)
-  const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null)
-  const [skillFilter, setSkillFilter] = useState('all')
+  const [skillFilters, setSkillFilters] = useState<string[]>([])
   const [sortBySentiment, setSortBySentiment] = useState<'asc' | 'desc' | null>(null)
+  const [sortByDate, setSortByDate] = useState<'asc' | 'desc' | null>(null)
 
   const { recordings, pagination, isLoading, mutate } = useRecordings({
     page,
     limit: 10,
-    status,
     search,
     userId,
-    skill: skillFilter !== 'all' ? skillFilter : undefined,
-    sortBySentiment
+    skills: skillFilters.length > 0 ? skillFilters : undefined,
+    sortBySentiment,
+    sortByDate
   })
+  
+  const toggleSkillFilter = (skill: string) => {
+    setSkillFilters(prev => 
+      prev.includes(skill) 
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    )
+    setPage(1)
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSearch(searchInput)
     setPage(1)
-  }
-
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    await updateRecording(id, { status: newStatus as Recording['status'] })
-    mutate()
   }
 
   const handleDelete = async (id: string) => {
@@ -141,31 +132,46 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
             <Button type="submit" variant="secondary">Buscar</Button>
           </form>
 
-          <div className="flex gap-2">
-            <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="pending">Pendiente</SelectItem>
-                <SelectItem value="reviewed">Revisado</SelectItem>
-                <SelectItem value="archived">Archivado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={skillFilter} onValueChange={(value) => { setSkillFilter(value); setPage(1) }}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Habilidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las habilidades</SelectItem>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                Habilidades
+                {skillFilters.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 rounded-full px-2">
+                    {skillFilters.length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="end">
+              <div className="space-y-2">
+                <p className="text-sm font-medium mb-3">Filtrar por habilidades</p>
                 {Object.entries(softSkillLabels).map(([key, { label }]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={key}
+                      checked={skillFilters.includes(key)}
+                      onCheckedChange={() => toggleSkillFilter(key)}
+                    />
+                    <label htmlFor={key} className="text-sm cursor-pointer">
+                      {label}
+                    </label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+                {skillFilters.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => { setSkillFilters([]); setPage(1) }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -193,21 +199,35 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
               <TableHead className="hidden md:table-cell">Transcripcion</TableHead>
               <TableHead className="hidden lg:table-cell">Habilidades</TableHead>
               <TableHead className="hidden sm:table-cell">Duracion</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="hidden lg:table-cell">Fecha</TableHead>
+              <TableHead className="hidden lg:table-cell">
+                <button
+                  onClick={() => {
+                    if (sortByDate === null) setSortByDate('desc')
+                    else if (sortByDate === 'desc') setSortByDate('asc')
+                    else setSortByDate(null)
+                    setPage(1)
+                  }}
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  Fecha
+                  {sortByDate === null && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                  {sortByDate === 'desc' && <ArrowDown className="h-4 w-4 text-primary" />}
+                  {sortByDate === 'asc' && <ArrowUp className="h-4 w-4 text-primary" />}
+                </button>
+              </TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Cargando grabaciones...
                 </TableCell>
               </TableRow>
             ) : recordings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No se encontraron grabaciones
                 </TableCell>
               </TableRow>
@@ -253,11 +273,6 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                   <TableCell className="hidden sm:table-cell">
                     {formatDuration(recording.duration_seconds)}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={statusColors[recording.status]}>
-                      {statusLabels[recording.status]}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="hidden lg:table-cell text-muted-foreground">
                     {formatDate(recording.created_at)}
                   </TableCell>
@@ -273,14 +288,6 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                         <DropdownMenuItem onClick={() => setSelectedRecording(recording)}>
                           <Eye className="h-4 w-4 mr-2" />
                           Ver detalles
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(recording.id, 'reviewed')}>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Marcar revisado
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(recording.id, 'archived')}>
-                          <Archive className="h-4 w-4 mr-2" />
-                          Archivar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => handleDelete(recording.id)}
@@ -355,12 +362,6 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Estado</p>
-                  <Badge variant="outline" className={`mt-1 ${statusColors[selectedRecording.status]}`}>
-                    {statusLabels[selectedRecording.status]}
-                  </Badge>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-muted-foreground">Duracion</p>
                   <p className="mt-1">{formatDuration(selectedRecording.duration_seconds)}</p>
                 </div>
@@ -401,28 +402,7 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                   <p className="whitespace-pre-wrap">{selectedRecording.transcription}</p>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleStatusChange(selectedRecording.id, 'reviewed')
-                    setSelectedRecording(null)
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Marcar revisado
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleStatusChange(selectedRecording.id, 'archived')
-                    setSelectedRecording(null)
-                  }}
-                >
-                  <Archive className="h-4 w-4 mr-2" />
-                  Archivar
-                </Button>
-              </div>
+              
             </div>
           )}
         </DialogContent>
