@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   description: 'Gestion de transcripciones de voz - Humand Ascend',
   generator: 'v0.app',
   icons: {
-    icon: '/humand-icon.svg',
-    apple: '/humand-icon.svg',
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 }
 
