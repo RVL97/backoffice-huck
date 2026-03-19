@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { RecordingsTable } from '@/components/recordings-table'
 import { UsersStatsTable } from '@/components/users-stats-table'
 import { Mic, Users, FileAudio } from 'lucide-react'
-import Image from 'next/image'
 
 export default function BackofficePage() {
   const [activeTab, setActiveTab] = useState<'recordings' | 'users'>('users')
@@ -24,12 +23,10 @@ export default function BackofficePage() {
                   <h1 className="text-lg font-semibold tracking-tight text-foreground">
                     Backoffice
                   </h1>
-                  <Image
+                  <img
                     src="/humand-logo.png"
                     alt="Humand"
-                    width={80}
-                    height={24}
-                    unoptimized
+                    className="h-6 w-auto"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
