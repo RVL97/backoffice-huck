@@ -5,7 +5,40 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// GET: Fetch existing report or return null
 export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { userId } = await params
+  const supabase = await createClient()
+
+  // Check if report exists
+  const { data: existingReport, error: fetchError } = await supabase
+    .from('user_reports')
+    .select('*')
+    .eq('user_identifier', userId)
+    .single()
+
+  if (existingReport) {
+    return NextResponse.json({
+      userId,
+      report: existingReport.report,
+      skillsCount: existingReport.skills_count,
+      sentimentCount: existingReport.sentiment_count,
+      totalRecordings: existingReport.total_recordings,
+      createdAt: existingReport.created_at,
+      updatedAt: existingReport.updated_at,
+      cached: true
+    })
+  }
+
+  // No report exists
+  return NextResponse.json({ userId, report: null, cached: false })
+}
+
+// POST: Generate new report (or regenerate)
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
@@ -28,7 +61,7 @@ export async function GET(
   }
 
   // Prepare transcriptions summary
-  const transcriptionsSummary = recordings.map((r, i) => {
+  const transcriptionsSummary = recordings.map((r) => {
     const date = new Date(r.created_at).toLocaleDateString('es-ES')
     const skills = r.soft_skills?.join(', ') || 'ninguna'
     return `[${date}] Sentimiento: ${r.sentiment}, Habilidades: ${skills}\nTranscripcion: "${r.transcription.substring(0, 500)}${r.transcription.length > 500 ? '...' : ''}"`
@@ -73,12 +106,31 @@ Por favor genera un reporte que incluya:
 Responde en espanol, de forma profesional pero empatica.`
     })
 
+    // Save or update report in database
+    const { error: upsertError } = await supabase
+      .from('user_reports')
+      .upsert({
+        user_identifier: userId,
+        report: result.text,
+        skills_count: skillsCount,
+        sentiment_count: sentimentCount,
+        total_recordings: recordings.length,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_identifier'
+      })
+
+    if (upsertError) {
+      console.error('[v0] Error saving report:', upsertError)
+    }
+
     return NextResponse.json({
       userId,
       totalRecordings: recordings.length,
       skillsCount,
       sentimentCount,
-      report: result.text
+      report: result.text,
+      cached: false
     })
   } catch (error) {
     console.error('[v0] Error generating report:', error)
