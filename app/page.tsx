@@ -27,8 +27,8 @@ export default function BackofficePage() {
                   <img
                     src="/humand-logo.png"
                     alt="Humand"
-                    height={24}
-                    width={80}
+                    className="h-6"
+                    style={{ width: 'auto', height: 'auto', maxHeight: '24px' }}
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">

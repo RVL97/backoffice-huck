@@ -190,9 +190,7 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                   {sortBySentiment === 'desc' && <ArrowDown className="h-4 w-4 text-primary" />}
                 </button>
               </TableHead>
-              <TableHead>Usuario</TableHead>
-              <TableHead className="hidden md:table-cell">Transcripcion</TableHead>
-              <TableHead className="hidden lg:table-cell">Habilidades</TableHead>
+              <TableHead>Habilidades</TableHead>
               <TableHead className="hidden sm:table-cell">Duracion</TableHead>
               <TableHead className="hidden lg:table-cell">
                 <button
@@ -216,13 +214,13 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   Cargando grabaciones...
                 </TableCell>
               </TableRow>
             ) : recordings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No se encontraron grabaciones
                 </TableCell>
               </TableRow>
@@ -241,13 +239,7 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                       {sentimentEmojis[recording.sentiment || 'neutral']?.emoji || '😐'}
                     </span>
                   </TableCell>
-                  <TableCell className="font-medium">{recording.user_identifier}</TableCell>
-                  <TableCell className="hidden md:table-cell max-w-xs">
-                    <span className="text-muted-foreground">
-                      {truncateText(recording.transcription, 50)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell>
                     <div className="flex items-center gap-1">
                       {recording.soft_skills && recording.soft_skills.length > 0 ? (
                         <>
@@ -338,14 +330,10 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Usuario</p>
-                  <p className="mt-1">{selectedRecording.user_identifier}</p>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-muted-foreground">Sentimiento</p>
                   <p className="mt-1 flex items-center gap-2">
                     <span className="text-2xl">
-                      {sentimentEmojis[selectedRecording.sentiment || 'neutral']?.emoji || '😐'}
+                      {sentimentEmojis[selectedRecording.sentiment || 'neutral']?.emoji || ''}
                     </span>
                     <span>{sentimentEmojis[selectedRecording.sentiment || 'neutral']?.label || 'Neutral'}</span>
                   </p>
@@ -359,12 +347,8 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                   <p className="mt-1">{selectedRecording.language?.toUpperCase()}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Creado</p>
+                  <p className="text-sm font-medium text-muted-foreground">Fecha</p>
                   <p className="mt-1">{formatDate(selectedRecording.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Actualizado</p>
-                  <p className="mt-1">{formatDate(selectedRecording.updated_at)}</p>
                 </div>
               </div>
               <div>
@@ -386,12 +370,16 @@ export function RecordingsTable({ userId }: { userId?: string } = {}) {
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Transcripcion</p>
-                <div className="rounded-lg bg-muted p-4 max-h-64 overflow-y-auto">
-                  <p className="whitespace-pre-wrap">{selectedRecording.transcription}</p>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Analisis</p>
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-sm">
+                    {selectedRecording.soft_skills && selectedRecording.soft_skills.length > 0 
+                      ? `Esta grabacion muestra ${selectedRecording.soft_skills.length} habilidad${selectedRecording.soft_skills.length > 1 ? 'es' : ''} blanda${selectedRecording.soft_skills.length > 1 ? 's' : ''} detectada${selectedRecording.soft_skills.length > 1 ? 's' : ''}, con un sentimiento ${sentimentEmojis[selectedRecording.sentiment || 'neutral']?.label?.toLowerCase() || 'neutral'}. ${selectedRecording.sentiment === 'positive' ? 'El usuario demuestra una actitud constructiva en su comunicacion.' : selectedRecording.sentiment === 'negative' ? 'Se recomienda dar seguimiento al estado emocional del usuario.' : 'El tono general es equilibrado y objetivo.'}`
+                      : `No se detectaron habilidades blandas especificas en esta grabacion. El sentimiento general es ${sentimentEmojis[selectedRecording.sentiment || 'neutral']?.label?.toLowerCase() || 'neutral'}.`
+                    }
+                  </p>
                 </div>
               </div>
-              
             </div>
           )}
         </DialogContent>
