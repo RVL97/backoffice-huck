@@ -55,9 +55,10 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [showLetterDialog, setShowLetterDialog] = useState(false)
   const [showNotifyDialog, setShowNotifyDialog] = useState(false)
-  const [notifyUrl, setNotifyUrl] = useState('https://backoffice-huck-u3pp.vercel.app/api/notify')
+  const [notifyUrl, setNotifyUrl] = useState('https://humand-ascend-mvp-nu.vercel.app/api/webhook')
   const [isNotifying, setIsNotifying] = useState(false)
   const [notifyResult, setNotifyResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const sentiment = user ? (sentimentEmojis[user.latest_sentiment] || sentimentEmojis.neutral) : sentimentEmojis.neutral
@@ -109,30 +110,28 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
   const sendNotification = async () => {
     setIsNotifying(true)
     setNotifyResult(null)
+    setLastQuestion(null)
     try {
       const response = await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          targetUrl: notifyUrl,
-          type: 'user_report',
-          userId,
-          data: {
-            report: report?.substring(0, 500),
-            letter: letter?.substring(0, 500),
-            stats: user ? {
-              totalRecordings: user.total_recordings,
-              currentStreak: user.current_streak,
-              maxStreak: user.max_streak
-            } : null
-          }
+          targetUrl: notifyUrl
         })
       })
       const data = await response.json()
-      setNotifyResult({
-        success: data.success,
-        message: data.success ? 'Notificacion enviada exitosamente' : data.error
-      })
+      if (data.success) {
+        setLastQuestion(data.question)
+        setNotifyResult({
+          success: true,
+          message: 'Pregunta enviada exitosamente'
+        })
+      } else {
+        setNotifyResult({
+          success: false,
+          message: data.error || 'Error enviando notificacion'
+        })
+      }
     } catch (error) {
       setNotifyResult({
         success: false,
@@ -311,17 +310,23 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
       </Dialog>
 
       {/* Notify Dialog */}
-      <Dialog open={showNotifyDialog} onOpenChange={setShowNotifyDialog}>
+      <Dialog open={showNotifyDialog} onOpenChange={(open) => {
+        setShowNotifyDialog(open)
+        if (!open) {
+          setNotifyResult(null)
+          setLastQuestion(null)
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enviar Notificacion</DialogTitle>
+            <DialogTitle>Enviar Pregunta de Reflexion</DialogTitle>
             <DialogDescription>
-              Enviar datos del usuario a otra aplicacion via webhook
+              Envia una pregunta aleatoria a la otra aplicacion via webhook
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="notifyUrl">URL de destino</Label>
+              <Label htmlFor="notifyUrl">URL de destino (webhook)</Label>
               <Input
                 id="notifyUrl"
                 value={notifyUrl}
@@ -329,11 +334,17 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
                 placeholder="https://otra-app.vercel.app/api/webhook"
               />
             </div>
+            {lastQuestion && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <p className="text-xs text-blue-600 font-medium mb-1">Pregunta enviada:</p>
+                <p className="text-sm text-blue-900">{lastQuestion}</p>
+              </div>
+            )}
             {notifyResult && (
               <div className={`p-3 rounded-lg text-sm ${
                 notifyResult.success 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                  : 'bg-red-100 text-red-800 border border-red-200'
               }`}>
                 {notifyResult.message}
               </div>
@@ -344,7 +355,7 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
               className="w-full gap-2"
             >
               {isNotifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Enviar Notificacion
+              Enviar Pregunta Aleatoria
             </Button>
           </div>
         </DialogContent>

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: 'Notificacion enviada exitosamente',
-      questionSent: question,
+      question,
       response: responseData
     })
   } catch (error) {
