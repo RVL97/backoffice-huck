@@ -5,6 +5,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+// GET: Fetch existing report or return null
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
@@ -12,7 +13,39 @@ export async function GET(
   const { userId } = await params
   const supabase = await createClient()
 
-  // Get all recordings for this user
+  try {
+    const { data: existingReport, error: fetchError } = await supabase
+      .from('user_reports')
+      .select('*')
+      .eq('user_identifier', userId)
+      .single()
+
+    if (fetchError && fetchError.code === 'PGRST205') {
+      return NextResponse.json({ userId, report: null, cached: false })
+    }
+
+    if (existingReport) {
+      return NextResponse.json({
+        userId,
+        report: existingReport.report,
+        cached: true
+      })
+    }
+  } catch (e) {
+    // Table might not exist
+  }
+
+  return NextResponse.json({ userId, report: null, cached: false })
+}
+
+// POST: Generate new report
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { userId } = await params
+  const supabase = await createClient()
+
   const { data: recordings, error } = await supabase
     .from('recordings')
     .select('*')
@@ -27,14 +60,7 @@ export async function GET(
     return NextResponse.json({ error: 'No hay grabaciones para este usuario' }, { status: 404 })
   }
 
-  // Prepare transcriptions summary
-  const transcriptionsSummary = recordings.map((r, i) => {
-    const date = new Date(r.created_at).toLocaleDateString('es-ES')
-    const skills = r.soft_skills?.join(', ') || 'ninguna'
-    return `[${date}] Sentimiento: ${r.sentiment}, Habilidades: ${skills}\nTranscripcion: "${r.transcription.substring(0, 500)}${r.transcription.length > 500 ? '...' : ''}"`
-  }).join('\n\n')
-
-  // Count skills frequency
+  // Count skills and sentiment
   const skillsCount: Record<string, number> = {}
   const sentimentCount = { positive: 0, negative: 0, neutral: 0 }
   
@@ -45,45 +71,35 @@ export async function GET(
     })
   })
 
+  const predominant = sentimentCount.positive > sentimentCount.negative ? 'positivo' : sentimentCount.negative > sentimentCount.positive ? 'negativo' : 'neutral'
+  const topSkills = Object.keys(skillsCount).slice(0, 3).join(', ') || 'ninguna'
+
   try {
     const result = await generateText({
       model: anthropic('claude-sonnet-4-6'),
-      system: `Eres un experto en desarrollo personal y recursos humanos. Tu tarea es analizar las grabaciones de reflexiones diarias de un usuario y generar un reporte completo sobre su estado general, crecimiento y areas de mejora.
-
-El reporte debe ser profesional pero cercano, enfocado en el desarrollo personal del usuario.`,
-      prompt: `Genera un reporte del estado general del usuario "${userId}" basado en sus ${recordings.length} grabaciones.
-
-ESTADISTICAS:
-- Total de grabaciones: ${recordings.length}
-- Sentimiento positivo: ${sentimentCount.positive} veces
-- Sentimiento neutral: ${sentimentCount.neutral} veces
-- Sentimiento negativo: ${sentimentCount.negative} veces
-- Habilidades detectadas: ${Object.entries(skillsCount).map(([k, v]) => `${k}: ${v} veces`).join(', ')}
-
-TRANSCRIPCIONES:
-${transcriptionsSummary}
-
-Por favor genera un reporte que incluya:
-1. RESUMEN GENERAL: Un parrafo describiendo el estado general del usuario
-2. FORTALEZAS: Las habilidades y aspectos positivos mas destacados
-3. AREAS DE CRECIMIENTO: Donde el usuario ha mostrado mejora con el tiempo
-4. AREAS DE MEJORA: Aspectos que podrian trabajarse
-5. RECOMENDACIONES: Sugerencias concretas para el desarrollo personal
-
-Responde en espanol, de forma profesional pero empatica.`
+      system: `Escribe conclusiones muy breves sobre personas. MAXIMO 2 oraciones cortas. Sin titulos, sin viñetas, sin emojis, sin formato. Solo texto plano directo.`,
+      prompt: `Concluye en maximo 2 oraciones sobre esta persona: sentimiento ${predominant}, habilidades ${topSkills}. Formato ejemplo: "Muestra buena autoconciencia y habilidades de comunicacion. Su principal area de mejora es profundizar en sus reflexiones."`
     })
+
+    // Try to save (silently fails if table doesn't exist)
+    await supabase
+      .from('user_reports')
+      .upsert({
+        user_identifier: userId,
+        report: result.text,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_identifier' })
+      .then(() => {})
+      .catch(() => {})
 
     return NextResponse.json({
       userId,
-      totalRecordings: recordings.length,
-      skillsCount,
-      sentimentCount,
-      report: result.text
+      report: result.text,
+      cached: false
     })
   } catch (error) {
-    console.error('[v0] Error generating report:', error)
     return NextResponse.json({ 
-      error: `Error generando reporte: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      error: `Error generando reporte: ${error instanceof Error ? error.message : 'Unknown'}` 
     }, { status: 500 })
   }
 }

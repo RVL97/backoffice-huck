@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, use } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useUsersStats } from '@/hooks/use-users-stats'
 import { RecordingsTable } from '@/components/recordings-table'
 import { Button } from '@/components/ui/button'
 import { 
   ArrowLeft, 
-  FileText, 
   Award, 
   Send, 
   Loader2, 
@@ -15,7 +14,8 @@ import {
   Clock, 
   MessageSquare,
   Copy,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -49,10 +49,10 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
   const user = users.find(u => u.user_identifier === userId)
 
   const [report, setReport] = useState<string | null>(null)
+  const [reportLoading, setReportLoading] = useState(true)
+  const [isRegenerating, setIsRegenerating] = useState(false)
   const [letter, setLetter] = useState<string | null>(null)
-  const [isLoadingReport, setIsLoadingReport] = useState(false)
   const [isLoadingLetter, setIsLoadingLetter] = useState(false)
-  const [showReportDialog, setShowReportDialog] = useState(false)
   const [showLetterDialog, setShowLetterDialog] = useState(false)
   const [showNotifyDialog, setShowNotifyDialog] = useState(false)
   const [notifyUrl, setNotifyUrl] = useState('https://humand-ascend-mvp-nu.vercel.app/api/webhook')
@@ -63,27 +63,50 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
 
   const sentiment = user ? (sentimentEmojis[user.latest_sentiment] || sentimentEmojis.neutral) : sentimentEmojis.neutral
 
-  const generateReport = async () => {
-    setIsLoadingReport(true)
+  // Fetch existing report on mount
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}/report`)
+        const data = await response.json()
+        if (data.report) {
+          setReport(data.report)
+        } else {
+          // No report exists, generate one automatically
+          await regenerateReport()
+        }
+      } catch (error) {
+        console.error('Error fetching report:', error)
+      } finally {
+        setReportLoading(false)
+      }
+    }
+    fetchReport()
+  }, [userId])
+
+  const regenerateReport = async () => {
+    setIsRegenerating(true)
     try {
-      const response = await fetch(`/api/users/${encodeURIComponent(userId)}/report`)
+      const response = await fetch(`/api/users/${encodeURIComponent(userId)}/report`, {
+        method: 'POST'
+      })
       const data = await response.json()
       if (data.error) {
-        alert(data.error)
+        console.error(data.error)
       } else {
         setReport(data.report)
-        setShowReportDialog(true)
       }
     } catch (error) {
-      alert('Error generando reporte')
+      console.error('Error generating report:', error)
     } finally {
-      setIsLoadingReport(false)
+      setIsRegenerating(false)
+      setReportLoading(false)
     }
   }
 
   const generateLetter = async () => {
     if (!report) {
-      alert('Primero debes generar el reporte')
+      alert('No hay reporte disponible')
       return
     }
     setIsLoadingLetter(true)
@@ -217,20 +240,68 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
 
+        {/* AI Report Section */}
+        <div className="rounded-2xl bg-white border border-border shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Resumen del Perfil</h2>
+              <p className="text-sm text-muted-foreground">Analisis generado con IA basado en las grabaciones</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={regenerateReport}
+                disabled={isRegenerating || reportLoading}
+                className="gap-2"
+              >
+                {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Regenerar
+              </Button>
+              {report && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => copyToClipboard(report)}
+                  className="gap-2"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? 'Copiado' : 'Copiar'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="p-6">
+            {reportLoading || isRegenerating ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin mr-3" />
+                <span>{isRegenerating ? 'Generando resumen con IA...' : 'Cargando resumen...'}</span>
+              </div>
+            ) : report ? (
+              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground">
+                {report}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No se pudo generar el resumen. Asegurate de que el usuario tenga grabaciones.</p>
+                <Button 
+                  variant="outline" 
+                  onClick={regenerateReport}
+                  className="mt-4 gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Intentar de nuevo
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
           <Button 
-            onClick={generateReport} 
-            disabled={isLoadingReport}
-            className="gap-2"
-          >
-            {isLoadingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-            Generar Reporte con IA
-          </Button>
-          <Button 
             onClick={generateLetter} 
             disabled={isLoadingLetter || !report}
-            variant="outline"
             className="gap-2"
           >
             {isLoadingLetter ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
@@ -252,34 +323,6 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
           <RecordingsTable userId={userId} />
         </div>
       </div>
-
-      {/* Report Dialog */}
-      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Reporte de {userId}</DialogTitle>
-            <DialogDescription>
-              Analisis generado con IA basado en todas las grabaciones
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div className="flex justify-end mb-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => copyToClipboard(report || '')}
-                className="gap-2"
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copiado' : 'Copiar'}
-              </Button>
-            </div>
-            <div className="rounded-lg bg-muted p-6 whitespace-pre-wrap text-sm">
-              {report}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Letter Dialog */}
       <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
