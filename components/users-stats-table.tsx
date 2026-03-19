@@ -40,9 +40,9 @@ function StatCard({
   className?: string
 }) {
   return (
-    <div className={`flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50 ${className}`}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-        <Icon className="h-5 w-5 text-primary" />
+    <div className={`flex items-center gap-4 p-5 rounded-2xl bg-white border border-border shadow-sm ${className}`}>
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+        <Icon className="h-5 w-5 text-white" />
       </div>
       <div>
         <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>
@@ -135,8 +135,8 @@ export function UsersStatsTable() {
       </div>
 
       {/* Tabla de usuarios */}
-      <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur">
-        <div className="px-6 py-5 border-b border-border/50">
+      <div className="rounded-2xl border border-border bg-white shadow-sm">
+        <div className="px-6 py-5 border-b border-border">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">Estadisticas por Usuario</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Racha actual, record historico, duracion promedio y sentimiento de cada usuario

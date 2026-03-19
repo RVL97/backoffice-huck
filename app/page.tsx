@@ -11,15 +11,15 @@ export default function BackofficePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header estilo Humand */}
-      <header className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-6 py-5">
+      <header className="border-b border-border bg-white">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                <Mic className="h-5 w-5 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
+                <Mic className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                <h1 className="text-lg font-semibold tracking-tight text-foreground">
                   Backoffice
                 </h1>
                 <p className="text-sm text-muted-foreground">
@@ -33,13 +33,13 @@ export default function BackofficePage() {
 
       <div className="container mx-auto px-6 py-8">
         {/* Tabs de navegacion estilo Humand */}
-        <div className="flex gap-1 mb-8 p-1 bg-secondary/50 rounded-xl w-fit">
+        <div className="flex gap-2 mb-8">
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
               activeTab === 'users'
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                ? 'bg-primary text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -47,10 +47,10 @@ export default function BackofficePage() {
           </button>
           <button
             onClick={() => setActiveTab('recordings')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
               activeTab === 'recordings'
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                ? 'bg-primary text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
             <FileAudio className="h-4 w-4" />

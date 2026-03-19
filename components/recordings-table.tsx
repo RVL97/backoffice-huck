@@ -37,8 +37,8 @@ import {
 import { MoreHorizontal, Search, ChevronLeft, ChevronRight, Eye, CheckCircle, Archive, Trash2 } from 'lucide-react'
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  reviewed: 'bg-primary/20 text-primary border-primary/30',
+  pending: 'bg-amber-100 text-amber-700 border-amber-200',
+  reviewed: 'bg-primary/10 text-primary border-primary/20',
   archived: 'bg-muted text-muted-foreground border-border'
 }
 
@@ -55,14 +55,14 @@ const sentimentEmojis: Record<string, { emoji: string; label: string }> = {
 }
 
 const softSkillLabels: Record<string, { label: string; color: string }> = {
-  comunicacion_efectiva: { label: 'Comunicacion Efectiva', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  escucha_activa: { label: 'Escucha Activa', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-  trabajo_en_equipo: { label: 'Trabajo en Equipo', color: 'bg-primary/20 text-primary border-primary/30' },
-  empatia: { label: 'Empatia', color: 'bg-pink-500/20 text-pink-400 border-pink-500/30' },
-  adaptabilidad: { label: 'Adaptabilidad', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
-  gestion_del_tiempo: { label: 'Gestion del Tiempo', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-  responsabilidad: { label: 'Responsabilidad', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' },
-  pensamiento_critico: { label: 'Pensamiento Critico', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' }
+  comunicacion_efectiva: { label: 'Comunicacion Efectiva', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  escucha_activa: { label: 'Escucha Activa', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  trabajo_en_equipo: { label: 'Trabajo en Equipo', color: 'bg-primary/10 text-primary border-primary/20' },
+  empatia: { label: 'Empatia', color: 'bg-pink-100 text-pink-700 border-pink-200' },
+  adaptabilidad: { label: 'Adaptabilidad', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  gestion_del_tiempo: { label: 'Gestion del Tiempo', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+  responsabilidad: { label: 'Responsabilidad', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  pensamiento_critico: { label: 'Pensamiento Critico', color: 'bg-rose-100 text-rose-700 border-rose-200' }
 }
 
 export function RecordingsTable() {
@@ -148,7 +148,7 @@ export function RecordingsTable() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur">
+      <div className="rounded-2xl border border-border bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
