@@ -77,22 +77,20 @@ export async function POST(
   try {
     const result = await generateText({
       model: anthropic('claude-sonnet-4-6'),
-      system: `Genera descripciones de personas en maximo 2 oraciones. Se muy conciso.`,
-      prompt: `Describe en 2 oraciones: ${recordings.length} reflexiones, sentimiento ${predominant}, habilidades: ${topSkills}. En espanol, sin titulos.`
+      system: `Escribe conclusiones muy breves sobre personas. MAXIMO 2 oraciones cortas. Sin titulos, sin viñetas, sin emojis, sin formato. Solo texto plano directo.`,
+      prompt: `Concluye en maximo 2 oraciones sobre esta persona: sentimiento ${predominant}, habilidades ${topSkills}. Formato ejemplo: "Muestra buena autoconciencia y habilidades de comunicacion. Su principal area de mejora es profundizar en sus reflexiones."`
     })
 
-    // Try to save (might fail if table doesn't exist)
-    try {
-      await supabase
-        .from('user_reports')
-        .upsert({
-          user_identifier: userId,
-          report: result.text,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_identifier' })
-    } catch (e) {
-      // Ignore - persistence is optional
-    }
+    // Try to save (silently fails if table doesn't exist)
+    await supabase
+      .from('user_reports')
+      .upsert({
+        user_identifier: userId,
+        report: result.text,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_identifier' })
+      .then(() => {})
+      .catch(() => {})
 
     return NextResponse.json({
       userId,
